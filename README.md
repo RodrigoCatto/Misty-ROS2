@@ -5,5 +5,5 @@ Clone the repository:
 ```
 mkdir -p misty_ws/src
 cd misty_ws
-git clone --recursive https://github.com/RodrigoCatto/Misty-ROS2.git src
+git clone --recursive https://github.com/RodrigoCatto/misty_ros2.git src
 ```
