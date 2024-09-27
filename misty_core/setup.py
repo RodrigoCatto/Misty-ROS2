@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+                'misty_low_level = misty_core.misty_low_level:main',
         ],
     },
 )
