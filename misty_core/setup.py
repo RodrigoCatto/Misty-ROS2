@@ -1,5 +1,8 @@
 from setuptools import find_packages, setup
 
+import os
+from glob import glob
+
 package_name = 'misty_core'
 
 setup(
@@ -10,6 +13,9 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # ADDED
+        (os.path.join('share', package_name), glob('launch/*launch.[pxy][yma]*')),
+         # END ADDED
     ],
     install_requires=['setuptools'],
     zip_safe=True,
