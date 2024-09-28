@@ -17,8 +17,12 @@ class MistyLowLevel(Node):
         # Load parameters
         my_parameter_descriptor = ParameterDescriptor(description='Misty IP Address')
         self.declare_parameter('ip_address', '0.0.0.0', my_parameter_descriptor)
+        self.declare_parameter('robot_name', 'misty_0', my_parameter_descriptor)
+
         ip_adrress = self.get_parameter('ip_address').get_parameter_value().string_value
-        self.get_logger().info('IP: %s!' % ip_adrress)
+        robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
+
+        self.get_logger().info("{} at IP:{}".format(robot_name, ip_adrress))
 
         self.misty = mistyPy.Robot(ip_adrress) #TODO error handling
         self.misty.stop() # Make sure that Misty is halted
