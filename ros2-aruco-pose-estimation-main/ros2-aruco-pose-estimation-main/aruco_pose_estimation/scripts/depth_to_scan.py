@@ -14,6 +14,7 @@ from tf_transformations import euler_from_quaternion, quaternion_from_euler
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from nav_msgs.msg import OccupancyGrid, MapMetaData
 
 import os
 
@@ -22,8 +23,8 @@ class DepthToScan(Node):
 
     def __init__(self):
         super().__init__('depth_to_scan_node')
-        self.publisher_ = self.create_publisher(LaserScan, '/scan', 10)   #misty_3/odom
-        self.get_logger().info('Publishing scan info')
+        self.publisher_ = self.create_publisher(OccupancyGrid, '/costmap', 10)
+        self.get_logger().info('Publishing costmap')
 
         self.subscription = self.create_subscription(Image, '/camera/depth/image_rect_raw', self.listener_callback, 10)
         self.bridge = CvBridge()
@@ -31,6 +32,10 @@ class DepthToScan(Node):
         self.plot_save_dir = "/home/aimsjetson/misty_ws/src/ros2-aruco-pose-estimation-main/ros2-aruco-pose-estimation-main/aruco_pose_estimation/scripts/"
         os.makedirs(self.plot_save_dir, exist_ok=True)  # Ensure the folder exists
         
+        self.resolution = 0.05  # Grid resolution in meters/pixel
+        self.origin = [-1.0, -1.0, 0.0]  # Costmap origin [x, y, yaw]
+        self.downscale_factor = 0.5
+
         self.saved_once = False
 
     def listener_callback(self, data):
@@ -49,20 +54,43 @@ class DepthToScan(Node):
             0  # Set 0 for false
         )
 
-        kernel = np.ones((5, 5), np.uint8) 
+        # scaled_down_image = cv2.resize(
+        #     filtered_depth_image,
+        #     (0, 0),  # Automatically calculate dimensions
+        #     fx=self.downscale_factor,  # Scale factor for width
+        #     fy=self.downscale_factor,  # Scale factor for height
+        #     interpolation=cv2.INTER_AREA  # Use area-based interpolation for downscaling
+        # )
+        #TODO scale the image to match the actual size it should be
+        #TODO change the Nav2 parameters to use this costmap
+
+        occupancy_grid = self.generate_occupancy_grid(filtered_depth_image)
+        self.publisher_.publish(occupancy_grid)
+
+
         filtered_depth_image = filtered_depth_image.astype(np.uint8)
-        #filtered_depth_image = cv2.erode(filtered_depth_image, (3, 3), iterations=1) 
-        #filtered_depth_image = cv2.dilate(filtered_depth_image, (5, 5), iterations=10) 
-        #filtered_depth_image = cv2.morphologyEx(filtered_depth_image, cv2.MORPH_CLOSE, (8,8))
 
-        contours, hierarchy = cv2.findContours(filtered_depth_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        print("Number of contours: {}".format(len(contours)))
+        # contours, hierarchy = cv2.findContours(filtered_depth_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # print("Number of contours: {}".format(len(contours)))
 
-        size_threshold = 30  # Adjust this value as needed
-        filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > size_threshold]
+        # size_threshold = 30  # Adjust this value as needed
+        # filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > size_threshold]
+        # filtered_contours = []
+        # self.Cxs = []
+        # self.Cys = []
 
-        cv2.drawContours(depth_image, filtered_contours, -1, (255,255,255), 3)
-        self.plot_images(depth_image, filtered_depth_image)
+        # for contour in contours:
+        #     if cv2.contourArea(contour) > size_threshold:
+        #         M = cv2.moments(contour)
+        #         Cx = int(M['m10']/M['m00'])
+        #         Cy = int(M['m01']/M['m00'])
+        #         self.Cxs.append(Cx)
+        #         self.Cys.append(Cy)
+        #         filtered_contours.append(contour)
+
+        
+        # cv2.drawContours(depth_image, filtered_contours, -1, (255,255,255), 3)
+        # self.plot_images(depth_image, filtered_depth_image)
 
 
         # For each blob or countour spread random points towards the blob or towards the contour it self
@@ -70,7 +98,46 @@ class DepthToScan(Node):
         #self.odometry.header.stamp = current_time
         #self.publisher_.publish(self.odometry) #Publish scan data
     
-    
+    def generate_occupancy_grid(self, filtered_image):
+            """
+            Convert the filtered depth image to an OccupancyGrid message.
+            """
+            filtered_image = cv2.flip(filtered_image, 0)
+            height, width = filtered_image.shape
+            occupancy_data = filtered_image.flatten() * 100  # Scale to [0, 100]
+
+            # Set unknown values (-1) for undefined areas
+            # occupancy_data[filtered_image.flatten() == 0] = 0
+            # occupancy_data[filtered_image.flatten() == 1] = 1
+
+            # Create OccupancyGrid message
+            occupancy_grid = OccupancyGrid()
+            occupancy_grid.header.stamp = self.get_clock().now().to_msg()
+            occupancy_grid.header.frame_id = 'map'
+
+            # Set metadata
+            metadata = MapMetaData()
+            metadata.resolution = self.resolution
+            metadata.width = width
+            metadata.height = height
+            metadata.origin.position.x = self.origin[0]
+            metadata.origin.position.y = self.origin[1]
+            metadata.origin.position.z = 0.0
+
+            (x, y, z, w) = quaternion_from_euler(0, 0, self.origin[2])
+            metadata.origin.orientation.x = x
+            metadata.origin.orientation.y = y
+            metadata.origin.orientation.z = z
+            metadata.origin.orientation.w = w
+
+            occupancy_grid.info = metadata
+
+            # Assign occupancy data
+            occupancy_grid.data = occupancy_data.tolist()
+
+            return occupancy_grid
+
+
     def plot_images(self, depth_image, perpendicular_distances):
         """
         Plot the original depth image and the perpendicular distances.
@@ -83,7 +150,8 @@ class DepthToScan(Node):
         axes[0].axis('off')
 
         # Perpendicular distances
-        axes[1].imshow(perpendicular_distances, cmap='binary')
+        axes[1].imshow(perpendicular_distances, cmap='gray')
+        axes[1].plot(self.Cxs, self.Cys, 'r*')
         axes[1].set_title("Perpendicular Distances (mm)")
         axes[1].axis('off')
 
