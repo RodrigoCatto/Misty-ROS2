@@ -1,0 +1,33 @@
+# realsense L515 RGB monocular camera calibration parameters
+image_width: 640
+image_height: 480
+camera_name: narrow_stereo
+camera_matrix:
+    rows: 3
+    cols: 3
+    data: [606.6106788415232, 0., 331.26852386838516, 0., 606.4760406935087, 239.88246336110248, 0., 0., 1.]
+distortion_model: plumb_bob
+distortion_coefficients:
+    rows: 1
+    cols: 5
+    data: [0.03126114326169302, 0.8316925586342332, 0.0007896984592491348, 0.0017460648798400336, -3.3873148261296286]
+rectification_matrix:
+    rows: 3
+    cols: 3
+    data: [1., 0., 0., 0., 1., 0., 0., 0., 1.]
+projection_matrix:
+    rows: 3
+    cols: 4
+    data:
+        [
+            606.6106788415232,
+            0.,
+            331.26852386838516,
+            0.,
+            0.,
+            606.4760406935087,
+            239.88246336110248,
+            0.,
+            0.,
+            1.,
+        ]

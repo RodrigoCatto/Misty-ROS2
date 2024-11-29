@@ -51,7 +51,7 @@ class MistyLowLevel(Node):
         misty_vel_x = int(clip(misty_vel_x, -100, 100))
         misty_angular_z = int(clip(misty_angular_z, -100, 100))
 
-        if -10 > misty_vel_x < 10 and -10 > misty_angular_z < 10:  #TODO Check if enters this condition
+        if -10 > misty_vel_x < 10 and -10 > misty_angular_z < 10:  
             self.get_logger().info("Halt")
             self.misty.stop()
         else:
@@ -75,8 +75,6 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
 
 
 

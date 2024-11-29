@@ -7,7 +7,7 @@ def generate_launch_description():
             package='misty_core',
             executable='misty_low_level',
             name='misty_low_level_node',
-            namespace= "misty_3", 
+            #namespace= "misty_3", 
             output='screen',
             emulate_tty=True,
             # node_namespace='misty_3',
